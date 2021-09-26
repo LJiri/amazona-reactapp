@@ -1,7 +1,7 @@
 import express from "express";
 import expressAsyncHandler from "express-async-handler";
 import Order from "../models/orderModel.js";
-import { isAdmin, isAuth } from "../utils.js";
+import { isAdmin, isAuth, mailgun, payOrderEmailTemplate } from "../utils.js";
 
 const orderRouter = express.Router();
 orderRouter.get(
@@ -64,7 +64,10 @@ orderRouter.put(
   "/:id/pay",
   isAuth,
   expressAsyncHandler(async (req, res) => {
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id).populate(
+      "user",
+      "email name"
+    );
     if (order) {
       order.isPaid = true;
       order.paidAt = Date.now();
@@ -75,6 +78,20 @@ orderRouter.put(
         email_address: req.body.email_address,
       };
       const updatedOrder = await order.save();
+
+      const adminEmail = process.env.ADMIN_EMAIL;
+      const adminDomain = process.env.ADMIN_DOMAIN;
+
+      mailgun()
+        .messages.create(adminDomain, {
+          from: `Amazona <${adminEmail}>`,
+          to: `${order.user.name} <${order.user.email}>`,
+          subject: `New order ${order._id}`,
+          html: payOrderEmailTemplate(order),
+        })
+        .then((msg) => console.log(msg)) // logs response data
+        .catch((err) => console.log(err)); // logs any error
+
       res.send({ message: "Order Paid", order: updatedOrder });
     } else {
       res.status(404).send({ message: "Order Not Found" });

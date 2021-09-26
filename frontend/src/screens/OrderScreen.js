@@ -67,6 +67,18 @@ export default function OrderScreen(props) {
   const successPaymentHandler = (paymentResult) => {
     dispatch(payOrder(order, paymentResult));
   };
+
+  const fakeSuccessPaymentHandler = () => {
+    dispatch(
+      payOrder(order, {
+        id: `fake-id-${Math.floor(Math.random() * 99999999)}`,
+        status: "COMPLETED",
+        update_time: new Date().toString(),
+        email_address: "fake@email.cz",
+      })
+    );
+  };
+
   const deliverHandler = () => {
     dispatch(deliverOrder(order._id));
   };
@@ -199,6 +211,9 @@ export default function OrderScreen(props) {
                   )}
                 </li>
               )}
+              {/* {!order.isPaid && ( */}
+              <button onClick={fakeSuccessPaymentHandler}>Fake payment </button>
+              {/* )} */}
               {userInfo.isAdmin && order.isPaid && !order.isDelivered && (
                 <li>
                   {loadingDeliver && <LoadingBox></LoadingBox>}
